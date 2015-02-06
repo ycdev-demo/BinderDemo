@@ -41,6 +41,7 @@ public class TestBinderNative extends Binder implements ITestBinder {
                 data.enforceInterface(DESCRIPTOR);
                 int value = data.readInt();
                 int result = increase(value);
+                reply.writeNoException();
                 reply.writeInt(result);
                 return true;
             }
@@ -49,6 +50,27 @@ public class TestBinderNative extends Binder implements ITestBinder {
                 data.enforceInterface(DESCRIPTOR);
                 String value = data.readString();
                 print(value);
+                reply.writeNoException();
+                return true;
+            }
+
+            case TEST_CRASH_TRANSACTION: {
+                data.enforceInterface(DESCRIPTOR);
+                String result = testCrash();
+                reply.writeNoException();
+                reply.writeString(result);
+                return true;
+            }
+
+            case TEST_CRASH2_TRANSACTION: {
+                data.enforceInterface(DESCRIPTOR);
+                try {
+                    String result = testCrash2();
+                    reply.writeNoException();
+                    reply.writeString(result);
+                } catch (Exception e) {
+                    reply.writeException(new SecurityException(e));
+                }
                 return true;
             }
         }
@@ -64,6 +86,16 @@ public class TestBinderNative extends Binder implements ITestBinder {
     @Override
     public void print(String value) {
         AppLogger.i(TAG, "native print invoked: " + value);
+    }
+
+    @Override
+    public String testCrash() {
+        throw new RuntimeException("test crash in IBinder impl");
+    }
+
+    @Override
+    public String testCrash2() throws RemoteException {
+        throw new RuntimeException("test crash2 in IBinder impl");
     }
 }
 
@@ -111,6 +143,40 @@ class TestBinderProxy implements ITestBinder {
             data.writeString(value);
             mRemote.transact(PRINT_TRANSACTION, data, reply, 0);
             reply.readException();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    @Override
+    public String testCrash() throws RemoteException {
+        AppLogger.i(TAG, "proxy testCrash invoked");
+
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(DESCRIPTOR);
+            mRemote.transact(TEST_CRASH_TRANSACTION, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    @Override
+    public String testCrash2() throws RemoteException {
+        AppLogger.i(TAG, "proxy testCrash2 invoked");
+
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(DESCRIPTOR);
+            mRemote.transact(TEST_CRASH2_TRANSACTION, data, reply, 0);
+            reply.readException();
+            return reply.readString();
         } finally {
             reply.recycle();
             data.recycle();

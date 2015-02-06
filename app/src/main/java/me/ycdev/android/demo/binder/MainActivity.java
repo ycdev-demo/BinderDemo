@@ -20,21 +20,24 @@ import me.ycdev.android.demo.binder.utils.AppLogger;
 public class MainActivity extends ActionBarActivity {
     private static final String TAG = "MainActivity";
 
+    private ITestBinder mTestBinder;
+
     ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             AppLogger.i(TAG, "service connected: " + service);
-            ITestBinder testBinder = TestBinderNative.asInterface(service);
+            mTestBinder = TestBinderNative.asInterface(service);
             try {
-                testBinder.print("test string");
+                mTestBinder.print("test string");
             } catch (RemoteException e) {
                 AppLogger.w(TAG, "failed to invoke the service", e);
             }
-            AppLogger.i(TAG, "ITestBinder: " + testBinder);
+            AppLogger.i(TAG, "ITestBinder: " + mTestBinder);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
+            AppLogger.i(TAG, "service disconnected: " + name);
         }
     };
 
@@ -50,7 +53,38 @@ public class MainActivity extends ActionBarActivity {
                 goToMyActivity();
             }
         });
-        test();
+
+        findViewById(R.id.btn_test_crash).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mTestBinder != null) {
+                    try {
+                        String result = mTestBinder.testCrash();
+                        AppLogger.i(TAG, "testCrash result: " + result);
+                    } catch (RemoteException e) {
+                        AppLogger.w(TAG, "failed to invoke the service", e);
+                    }
+                }
+            }
+        });
+
+        findViewById(R.id.btn_test_crash2).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mTestBinder != null && mTestBinder.asBinder().isBinderAlive()) {
+                    try {
+                        String result = mTestBinder.testCrash2();
+                        AppLogger.i(TAG, "testCrash result: " + result);
+                    } catch (RemoteException e) {
+                        AppLogger.w(TAG, "failed to invoke the service", e);
+                    }
+                } else {
+                    AppLogger.i(TAG, "binder died? service: " + mTestBinder);
+                }
+            }
+        });
+
+        bindService();
     }
 
     private void goToMyActivity() {
@@ -58,7 +92,7 @@ public class MainActivity extends ActionBarActivity {
         startActivity(intent);
     }
 
-    private void test() {
+    private void bindService() {
         Intent intent = new Intent(this, MyService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }

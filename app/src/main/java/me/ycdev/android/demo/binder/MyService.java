@@ -21,17 +21,25 @@ public class MyService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        AppLogger.d(TAG, "onCreate");
+        AppLogger.i(TAG, "onCreate");
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        AppLogger.d(TAG, "onDestroy");
+        AppLogger.i(TAG, "onDestroy");
     }
 
     @Override
     public void onRebind(Intent intent) {
         super.onRebind(intent);
+        AppLogger.i(TAG, "onRebind");
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        AppLogger.i(TAG, "onUnbind: " + intent);
+        return super.onUnbind(intent);
+//        return true;
     }
 }
